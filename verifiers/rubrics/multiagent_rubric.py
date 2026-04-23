@@ -41,6 +41,12 @@ class MultiAgentRubric(Rubric):
         # Actor metadata: actor_id -> {"is_trainable": bool}
         self.actors: dict[str, dict] = {}
 
+        # Register a group-level scoring marker so prime-rl uses run_group (not run_rollout).
+        # The actual scoring is done by our score_group override, not this function.
+        async def _multiagent_group_score(states: list, **kwargs) -> list:
+            return [0.0] * len(states)
+        self.add_reward_func(_multiagent_group_score, weight=0.0)
+
     def add_actor_reward_func(
         self,
         actor_id: str,
