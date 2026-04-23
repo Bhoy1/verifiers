@@ -1,0 +1,20 @@
+[[eval]]
+env_id = "poker_multi"
+model = "qwen/qwen3-235b-a22b-instruct-2507"
+provider = "prime"
+num_examples = 3d be
+rollouts_per_example = 9
+disable_tui = true
+verbose = true
+disable_env_server = true
+save_results = true
+state_columns = ["trajectory"]
+
+[eval.env_args]
+num_players = 3
+num_hands = 3
+
+[eval.env_args.player_models]
+player1 = "qwen/qwen3-235b-a22b-instruct-2507"
+player2 = "qwen/qwen3-30b-a3b-instruct-2507"
+player3 = "qwen/qwen3-30b-a3b-instruct-2507"

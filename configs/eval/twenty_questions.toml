@@ -1,0 +1,14 @@
+[[eval]]
+env_id = "twenty_questions_v2"
+model = "qwen/qwen3-235b-a22b-instruct-2507"
+provider = "prime"
+num_examples = 3
+rollouts_per_example = 2
+disable_tui = true
+verbose = true
+disable_env_server = true
+save_results = true
+state_columns = ["trajectory"]
+
+[eval.env_args]
+max_questions = 15

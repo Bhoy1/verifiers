@@ -1,0 +1,16 @@
+[[eval]]
+env_id = "rock_paper_scissors"
+model = "qwen/qwen3-235b-a22b-instruct-2507"
+provider = "prime"
+num_examples = 3
+rollouts_per_example = 4
+disable_tui = true
+verbose = true
+disable_env_server = true
+save_results = true
+state_columns = ["trajectory"]
+
+[eval.env_args]
+num_rounds = 3
+p1_model = "qwen/qwen3-235b-a22b-instruct-2507"
+p2_model = "qwen/qwen3-30b-a3b-instruct-2507"

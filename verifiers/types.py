@@ -276,6 +276,7 @@ class RolloutOutput(dict):
     prompt: Messages | None
     completion: Messages | None
     reward: float
+    advantage: float | None
     timing: RolloutTiming
     is_completed: bool
     is_truncated: bool

@@ -177,6 +177,7 @@ def state_to_output(
         task=state.get("task", "default"),
         info=state.get("info", {}),
         reward=state.get("reward", 0.0),
+        advantage=state.get("advantage"),
         error=state.get("error", None),
         timing=state.get("timing", {}),
         is_completed=state.get("is_completed", False),

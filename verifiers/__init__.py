@@ -20,6 +20,10 @@ from .rubrics.rubric import Rubric  # noqa # isort: skip
 from .parsers.maybe_think_parser import MaybeThinkParser
 from .parsers.think_parser import ThinkParser
 from .parsers.xml_parser import XMLParser
+from .envs.agent import Agent
+from .envs.registry import Registry
+from .envs.taskset import TaskSet
+from .rubrics.multiagent_rubric import MultiAgentRubric
 from .rubrics.rubric_group import RubricGroup
 from .utils.config_utils import MissingKeyError, ensure_keys
 from .utils.data_utils import (
@@ -45,6 +49,10 @@ __all__ = [
     "XMLParser",
     "Rubric",
     "JudgeRubric",
+    "Agent",
+    "Registry",
+    "TaskSet",
+    "MultiAgentRubric",
     "RubricGroup",
     "MathRubric",
     "TextArenaEnv",
@@ -56,6 +64,7 @@ __all__ = [
     "BrowserEnv",
     "OpenEnvEnv",
     "Environment",
+    "MultiAgentEnv",
     "MultiTurnEnv",
     "SingleTurnEnv",
     "PythonEnv",
@@ -106,6 +115,7 @@ _LAZY_IMPORTS = {
         "verifiers.clients.openai_completions_client:OpenAICompletionsClient"
     ),
     "Environment": "verifiers.envs.environment:Environment",
+    "MultiAgentEnv": "verifiers.envs.multiagent_env:MultiAgentEnv",
     "MultiTurnEnv": "verifiers.envs.multiturn_env:MultiTurnEnv",
     "SingleTurnEnv": "verifiers.envs.singleturn_env:SingleTurnEnv",
     "StatefulToolEnv": "verifiers.envs.stateful_tool_env:StatefulToolEnv",
@@ -175,6 +185,7 @@ if TYPE_CHECKING:
     from .clients.openai_completions_client import OpenAICompletionsClient  # noqa: F401
     from .envs.env_group import EnvGroup  # noqa: F401
     from .envs.environment import Environment  # noqa: F401
+    from .envs.multiagent_env import MultiAgentEnv  # noqa: F401
     from .envs.experimental.cli_agent_env import CliAgentEnv  # noqa: F401
     from .envs.experimental.gym_env import GymEnv  # noqa: F401
     from .envs.experimental.harbor_env import HarborEnv  # noqa: F401

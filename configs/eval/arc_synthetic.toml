@@ -1,0 +1,16 @@
+[[eval]]
+env_id = "arc_synthetic_multistrategy"
+model = "qwen/qwen3-235b-a22b-instruct-2507"
+provider = "prime"
+num_examples = 3
+rollouts_per_example = 4
+disable_tui = true
+verbose = true
+disable_env_server = true
+save_results = true
+state_columns = ["trajectory"]
+
+[eval.env_args]
+levels = [1]
+num_examples = 3
+num_sandboxes = 2
