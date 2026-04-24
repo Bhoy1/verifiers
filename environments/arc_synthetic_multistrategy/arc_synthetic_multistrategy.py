@@ -290,7 +290,7 @@ async def _setup_sandboxes() -> None:
             start_command="tail -f /dev/null",
             cpu_cores=1,
             memory_gb=2,
-            timeout_minutes=60,
+            timeout_minutes=360,
         ))
         await _sandbox_client.wait_for_creation(sandbox.id)
         await _sandbox_client.upload_bytes(
