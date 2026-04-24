@@ -1,0 +1,16 @@
+[project]
+name = "gsm8k-group"
+description = "GSM8K with group scoring — verifiers computes advantages"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "verifiers>=0.1.9",
+    "gsm8k",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = ["gsm8k_group.py", "pyproject.toml"]
