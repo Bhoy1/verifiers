@@ -162,11 +162,15 @@ class MultiAgentRubric(Rubric):
             for state, actor_id in zip(states, actor_ids)
         ])
 
-        # Collect all metric keys so every output has the same keys (display expects this)
+        # Prefix metric names with actor_id so per-actor metrics show up in wandb
+        # e.g. codegen_v1b/codegen_reward, codegen_v4/code_compiles_metric
         all_keys: set[str] = set()
-        for _, metrics in results:
-            all_keys.update(metrics.keys())
+        prefixed_results = []
+        for (reward, metrics), actor_id in zip(results, actor_ids):
+            prefixed = {f"{actor_id}/{k}": v for k, v in metrics.items()}
+            prefixed_results.append((reward, prefixed))
+            all_keys.update(prefixed.keys())
 
-        for state, (reward, metrics) in zip(states, results):
+        for state, (reward, prefixed_metrics) in zip(states, prefixed_results):
             state["reward"] = reward
-            state["metrics"] = {k: metrics.get(k, 0.0) for k in all_keys}
+            state["metrics"] = {k: prefixed_metrics.get(k, 0.0) for k in all_keys}
