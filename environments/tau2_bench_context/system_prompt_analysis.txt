@@ -1,0 +1,265 @@
+================================================================
+TAU2-BENCH CONTEXT AGENT: SYSTEM PROMPT ANALYSIS
+================================================================
+
+================================================================
+CURRENT SYSTEM PROMPT
+================================================================
+
+CONTEXT_AGENT_INSTRUCTION = """You are a customer service agent that helps the user according to the policy provided below.
+
+You manage a compressed context list instead of keeping full conversation history. Each turn you see your current context list and the latest message. You have NO other memory — if you don't save it, you lose it.
+
+EVERY TURN YOU MUST FOLLOW THESE STEPS IN ORDER:
+STEP 1: Output an <edit> block to save important info from the latest message to your context list.
+STEP 2: Output EITHER a text response to the customer OR a tool call (NEVER both).
+IF YOU SKIP STEP 1, YOU WILL FORGET EVERYTHING.
+
+Example — customer introduces themselves:
+<edit>
+context_list.append("customer <name>, user ID <user_id>")
+context_list.append("wants to <request summary>")
+</edit>
+I'll look into that for you right away.
+
+Example — after a tool returns data:
+<edit>
+context_list.append("reservation <id> is <origin> to <destination>, <cabin>, flight <number>, <date>")
+context_list.append("no insurance, status confirmed")
+</edit>
+I can see your reservation details...
+
+Available edit operations:
+  context_list.append("new fact")
+  context_list[0] = "updated fact"
+  context_list.pop(0)
+
+IMPORTANT RULES:
+- EVERY TURN must start with an <edit> block — NO EXCEPTIONS.
+- ALWAYS save tool results to context IMMEDIATELY — names, IDs, reservation details, flight info.
+- ALWAYS save: dates, times, names, locations, specific details, sentiments, and attitudes.
+- Copy names, IDs, and reservation codes EXACTLY from the message — never make up IDs.
+- Do not re-fetch data you already have in your context list.
+
+Try to be helpful and always follow the policy."""
+
+
+================================================================
+BASELINE SYSTEM PROMPT (for comparison — what works at 91%)
+================================================================
+
+AGENT_INSTRUCTION = """You are a customer service agent that helps the user according to the <policy> provided below.
+In each turn you can either:
+- Send a message to the user.
+- Make a tool call.
+You cannot do both at the same time.
+
+Try to be helpful and always follow the policy. Always make sure you generate valid JSON only."""
+
+
+================================================================
+FAILURE ANALYSIS: 24 FAILED TASKS ACROSS 3 DOMAINS
+================================================================
+
+Overall: Context 81% (121/150) vs Baseline 91% (136/150)
+
+Root cause distribution:
+  - Multi-step incomplete: 11 (46%) — agent drops step 2 of multi-step tasks
+  - Wrong action/details:  9  (38%) — agent has info but picks wrong option
+  - Over-chatty:           1  (4%)  — volunteered constraint, scared user off
+  - Other/unclear:         3  (13%)
+
+CRITICAL: Zero compression failures. Context list had correct info every time.
+
+----------------------------------------------------------------
+AIRLINE FAILURES (7/50)
+----------------------------------------------------------------
+
+Task 14: MULTI-STEP INCOMPLETE
+  What: Cancelled reservation but never booked replacement
+  Context had: [36] "Customer wants to: 1) Cancel reservation K1NW8N, 2) Book new cheapest business round trip"
+  Why: Agent sent chatty cancellation summary, user said STOP before booking could happen
+  Prompt issue: No guidance to complete all steps before responding to user
+
+Task 20: UNDER-ACTING
+  What: No flights matched "after 11am", agent asked "what date?" instead of exploring
+  Context had: All search results
+  Why: Agent only searched direct flights, didn't search one-stop in parallel
+  Prompt issue: "Do not re-fetch data" may discourage broader searches
+
+Task 21: WRONG DETAILS
+  What: Picked "fastest arrival" (4am-4pm, 12hr trip) instead of "fastest duration" (2pm-8pm, 6hr trip)
+  Context had: All flight options with times
+  Why: Agent made unilateral decision instead of presenting options to user
+  Prompt issue: No guidance to let user choose when multiple valid options exist
+
+Task 25: WRONG DETAILS
+  What: Used stale $299 price from old reservation (actual was $375). Also booked 1 bag when user said 0.
+  Context had: [12] "No insurance, no checked bags requested" [15] "Customer confirmed: no checked bags"
+  Why: "Do not re-fetch data" caused stale price usage. Agent confused "gold member free bag allowance" with "bring 1 bag"
+  Prompt issue: "Do not re-fetch data" directly caused this. No guidance on exact user preference adherence.
+
+Task 29: WRONG DETAILS
+  What: Added travel insurance user never requested
+  Context had: Original reservation had insurance + user mentioned health issue
+  Why: Agent over-generalized from old reservation's insurance to new booking
+  Prompt issue: No guidance to only include what user explicitly requests
+
+Task 35: WRONG DETAILS
+  What: Booked total_baggages=1 (free allowance) when user said "no baggage". Defended instead of fixing.
+  Context had: [18] "no extra baggage, no insurance" [31] "no extra bags"
+  Why: Agent substituted "1 free bag" default for user's stated "no bags"
+  Prompt issue: No guidance on using user's exact stated preferences
+
+----------------------------------------------------------------
+RETAIL FAILURES (14/50)
+----------------------------------------------------------------
+
+Tasks 2, 11, 39: MULTI-STEP INCOMPLETE
+  What: User confirmed action + said ###STOP### — agent never executed the confirmed action
+  Why: Agent was still composing response when user ended conversation
+  Prompt issue: No urgency to execute confirmed actions immediately
+
+Task 41: MULTI-STEP INCOMPLETE
+  What: Updated address on 1 order but missed second pending order with same wrong address
+  Why: Agent didn't check all affected orders
+  Prompt issue: No guidance to verify all related items are addressed
+
+Tasks 0, 9, 19, 49: WRONG DETAILS
+  What: Selected wrong items despite having correct user preferences in context
+  Examples: chose white backlight when user said no-backlight as fallback (task 0)
+           picked wrong cheapest variant $182.48 vs $180.93 (task 19)
+           misread "cheapest from rest of order" as "cheapest from catalog" (task 49)
+  Why: Agent substitutes own judgment for user-stated preferences
+  Prompt issue: No emphasis on following user's exact preference order
+
+Task 4: WRONG DETAILS
+  What: Reported "12 T-shirt variants" but 2 were out of stock — should be 10 available
+  Why: Counted all variants including unavailable ones
+  Prompt issue: No guidance on distinguishing available vs unavailable
+
+Task 35: WRONG DETAILS
+  What: Claimed both emails failed but only tried ONE email lookup
+  Why: Agent hallucinated having tried the second lookup
+  Prompt issue: No guidance to verify all options before giving up
+
+Task 48: OVER-CHATTY
+  What: Volunteered "returns are one-per-order" constraint, scared user into abandoning return
+  Why: Agent over-explained policy instead of just processing the confirmed action
+  Prompt issue: "EVERY TURN must start with edit" creates pressure to over-communicate
+
+----------------------------------------------------------------
+TELECOM FAILURES (3/50)
+----------------------------------------------------------------
+
+Tasks 15, 28, 33: MULTI-STEP INCOMPLETE
+  What: Fixed most issues but never toggled DEVICE-level data roaming (account level was fine)
+  Why: Agent checked account roaming setting but missed device-level toggle
+  Prompt issue: No guidance on verifying multi-layer settings (account vs device)
+
+
+================================================================
+WHAT THE CURRENT PROMPT GETS WRONG
+================================================================
+
+1. TOO MUCH URGENCY ON CONTEXT MANAGEMENT
+   "EVERY TURN", "NO EXCEPTIONS", "WILL FORGET EVERYTHING" — creates anxiety
+   about saving context, stealing focus from the actual customer task.
+
+2. "DO NOT RE-FETCH DATA" CAUSES STALE DATA
+   Task 25 used old $299 price instead of searching fresh. This rule backfires.
+
+3. NO GUIDANCE ON USER PREFERENCE ADHERENCE
+   Tasks 25, 29, 35 (airline), 0, 9, 19, 49 (retail) — agent substitutes
+   defaults for user's stated preferences. Prompt never says "use exact preferences."
+
+4. NO GUIDANCE ON COMPLETING MULTI-STEP TASKS
+   Tasks 2, 11, 14, 39, 41 — agent drops step 2. Prompt never says
+   "complete all confirmed actions before responding."
+
+5. NO GUIDANCE ON FIXING MISTAKES
+   Task 35 — agent defended wrong booking instead of calling update tool.
+   Prompt never says "if user corrects you, fix it."
+
+6. FORCED STRUCTURE IS TOO RIGID
+   "EVERY TURN must start with edit" — even when no edit is needed.
+   Wastes cognitive load on trivial sessions.
+
+
+================================================================
+PROPOSED NEW SYSTEM PROMPT
+================================================================
+
+CONTEXT_AGENT_INSTRUCTION = """You are a customer service agent that helps the user according to the <policy> provided below.
+
+In each turn you can either:
+- Send a message to the user.
+- Make a tool call.
+You cannot do both at the same time.
+
+You have limited memory: you only see a compressed context list and the latest message.
+Use <edit> blocks to save important information to your context list so you remember it across turns.
+
+Format:
+<edit>
+context_list.append("new fact")
+context_list[0] = "updated fact"
+context_list.pop(0)
+</edit>
+
+When saving to context:
+- Save exact IDs, codes, values, and names verbatim from tool results (never paraphrase)
+- Save the user's stated preferences exactly as they said them
+
+When taking actions:
+- Use the user's stated preferences exactly — do not substitute defaults or assumptions
+- If the user corrects a detail after you've acted, call the appropriate update tool to fix it
+
+Try to be helpful and always follow the policy."""
+
+
+================================================================
+HOW THE NEW PROMPT ADDRESSES EACH FAILURE PATTERN
+================================================================
+
+MULTI-STEP INCOMPLETE (46% of failures):
+  Old: No guidance on completing multi-step workflows
+  New: Simpler prompt = less cognitive overhead = agent focuses on task completion
+       Removing forced edit structure lets agent prioritize actions over saving
+
+WRONG DETAILS (38% of failures):
+  Old: "Do not re-fetch data" → stale prices. No preference adherence guidance.
+  New: "Save the user's stated preferences exactly as they said them"
+       "Use the user's stated preferences exactly — do not substitute defaults"
+       Removed "do not re-fetch" rule entirely
+
+OVER-CHATTY (4% of failures):
+  Old: "EVERY TURN must start with edit — NO EXCEPTIONS" = pressure to over-communicate
+  New: "Use <edit> blocks to save important information" = optional, when needed
+
+DEFENDING MISTAKES:
+  Old: No guidance
+  New: "If the user corrects a detail after you've acted, call the appropriate update tool"
+
+STALE DATA:
+  Old: "Do not re-fetch data you already have in your context list"
+  New: Rule removed. Agent can verify data when needed.
+
+
+================================================================
+TEST PLAN
+================================================================
+
+1. Rerun the 7 failed airline tasks with NEW prompt
+   --env-args '{"domain": "airline", "task_ids": [14, 20, 21, 22, 25, 29, 35]}'
+
+2. Compare pass rate: old prompt got 1/7, baseline got 5/7
+
+3. If improved, run full 50 airline tasks
+
+4. Then retail (50) and telecom (50)
+
+5. Compare against old prompt results:
+   - Airline: old=76%, baseline=86%
+   - Retail:  old=72%, baseline=86%
+   - Telecom: old=94%, baseline=100%

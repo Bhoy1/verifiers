@@ -1,0 +1,12 @@
+model = "Qwen/Qwen3.5-9B"
+max_steps = 100
+batch_size = 128
+rollouts_per_example = 8
+env_file = ["secrets.env"]
+
+[sampling]
+max_tokens = 32768
+
+[[env]]
+id = "bhoy1/longmemeval-context"
+args = { mode = "context" }
